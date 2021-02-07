@@ -1,4 +1,4 @@
-module github.com/hsarena/walg
+module github.com/hsarena/wal-g
 
 go 1.14
 

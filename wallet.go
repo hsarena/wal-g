@@ -16,12 +16,15 @@ type Wallet struct {
 	wif           btcutil.WIF
 }
 
-func (wallet *Wallet) updateWalletBalance(bc gobcy.API) {
-	addr, _ := bc.GetAddrBal(wallet.addressPubKey.String(), nil)
+func (wallet *Wallet) updateBalance(bc gobcy.API) {
+	addr, err := bc.GetAddrBal(wallet.addressPubKey.AddressPubKeyHash().String(), nil)
+	if err != nil {
+		fmt.Println(err)
+	}
 	wallet.balance = addr.Balance
 }
 
-func (wallet *Wallet) createWallet(name string) error {
+func (wallet *Wallet) Create(name string) error {
 
 	privateKey, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
@@ -42,10 +45,15 @@ func (wallet *Wallet) createWallet(name string) error {
 	wallet.addressPubKey = *publicKey
 	wallet.wif = *wif
 
+	fmt.Println("name: ", wallet.name)
+	fmt.Println("balance: ", wallet.balance.Int64())
+	fmt.Println("public key: ", wallet.addressPubKey.AddressPubKeyHash())
+	fmt.Println("wif: ", wallet.wif.String())
+
 	return nil
 }
 
-func (wallet *Wallet) improtWallet(name, inputWIF string) error {
+func (wallet *Wallet) Import(name, inputWIF string) error {
 	wif, err := btcutil.DecodeWIF(inputWIF)
 	if err != nil {
 		fmt.Println(err)
@@ -63,13 +71,13 @@ func (wallet *Wallet) improtWallet(name, inputWIF string) error {
 	return nil
 }
 
-func (wallet *Wallet) getWalletInfo() {
+func (wallet *Wallet) GetInfo() {
 	fmt.Println("name: ", wallet.name)
 	fmt.Println("wif: ", wallet.wif.String())
 	fmt.Println("pub addr: ", wallet.addressPubKey.AddressPubKeyHash().String())
 }
 
-func (wallet *Wallet) getBalance() {
-	wallet.updateWalletBalance(bc)
-	println("blance:", wallet.balance.Int64())
+func (wallet *Wallet) GetBalance(bc gobcy.API) {
+	wallet.updateBalance(bc)
+	fmt.Println("balance:", wallet.balance.Int64())
 }
