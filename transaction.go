@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 
 	"github.com/blockcypher/gobcy"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -29,6 +30,7 @@ func GetLastUnsignedTx(bc gobcy.API) string {
 
 func GetTxInfo(bc gobcy.API, txid string) {
 	fmt.Println(bc.GetTX(txid,nil))
+	fmt.Printf("https://www.blockchain.com/btc-testnet/tx/%#v", txid)
 }
 
 func (transaction *Transaction) CreateTX(bc gobcy.API, wallet *Wallet, destination string, amount int64) error {
@@ -83,6 +85,20 @@ func (transaction *Transaction) CreateTX(bc gobcy.API, wallet *Wallet, destinati
 	redeemTxOut := wire.NewTxOut(amount, destPkScript)
 	redeemTx.AddTxOut(redeemTxOut)
 
+	bigInt := big.NewInt(amount)
+	//Post New TXSkeleton
+	skel, err := bc.NewTX(gobcy.TempNewTX(srcAddr.String(), destAddr.String(), *bigInt ), false)
+	//Sign it locally
+	err = skel.Sign([]string {hex.EncodeToString(wallet.wif.PrivKey.Serialize())})
+	if err != nil {
+	  fmt.Println(err)
+	}
+	//Send TXSkeleton
+	skel, err = bc.SendTX(skel)
+	if err != nil {
+	  fmt.Println(err)
+	}
+
 	transaction.TxId = srcTxHash.String()
 	transaction.SourceAddress = srcAddr.EncodeAddress()
 	transaction.DestinationAddress = destAddr.EncodeAddress()
@@ -90,7 +106,12 @@ func (transaction *Transaction) CreateTX(bc gobcy.API, wallet *Wallet, destinati
 	transaction.UnsignedTx = hex.EncodeToString(srcPkScript)
 	transaction.RedeemTx = redeemTx
 
-	fmt.Println(transaction.TxId)
+	
+
+	fmt.Println("tx hash: ", skel.Trans.Hash)
+	fmt.Println(skel.Trans.Total.MarshalJSON())
+	fmt.Println("block hash", skel.Trans.BlockHash)
+
 	return nil
 }
 
@@ -117,7 +138,7 @@ func (transaction *Transaction) SignTx(wallet *Wallet) (string, error) {
 }
 
 func (transaction *Transaction) PushTX(bc gobcy.API) error {
-  skel, err := bc.PushTX(transaction.SignedTx)
+  skel, err := bc.PushTX(transaction.RedeemTx.TxHash().String())
   if err != nil {
     fmt.Println(err)
   }
